@@ -1,0 +1,71 @@
+<!-- Versjon 2 av Oppdragstjenesten, med enkel pålogging og database-oppdrag (Firebase) -->
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oppdragstjenesten</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    #app { max-width: 600px; margin: auto; }
+    .oppdrag { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <h1>Oppdragstjenesten</h1>
+
+  <!-- Login/Logout -->
+  <div id="auth-section">
+    <input id="email" type="email" placeholder="E-post" /><br><br>
+    <input id="password" type="password" placeholder="Passord" /><br><br>
+    <button id="login">Logg inn</button>
+    <button id="signup">Registrer</button>
+    <button id="logout" class="hidden">Logg ut</button>
+  </div>
+
+  <hr>
+
+  <!-- Opprett Oppdrag -->
+  <div id="create-task-section" class="hidden">
+    <h3>Legg ut oppdrag</h3>
+    <input id="title" type="text" placeholder="Oppdrags-tittel" /><br><br>
+    <textarea id="description" placeholder="Beskrivelse"></textarea><br><br>
+    <button id="create-task">Publiser oppdrag</button>
+  </div>
+
+  <hr>
+
+  <!-- Liste over oppdrag -->
+  <div id="tasks-section" class="hidden">
+    <h3>Tilgjengelige oppdrag</h3>
+    <div id="tasks"></div>
+  </div>
+</div>
+
+<!-- Firebase (du legger inn din key under) -->
+<script type="module">
+  // TODO: FYLL INN FIREBASE KONFIG HER
+  // import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-app.js";
+  // import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-auth.js";
+  // import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+  apiKey: "AIzaSyDetAoUeCO8DfraAHMihUJlGJupTvUwu68",
+  authDomain: "oppdragstjenesten-54329.firebaseapp.com",
+  projectId: "oppdragstjenesten-54329",
+  storageBucket: "oppdragstjenesten-54329.firebasestorage.app",
+  messagingSenderId: "1026577707287",
+  appId: "1:1026577707287:web:d868ab7265100682840752",
+  measurementId: "G-3XNQL7S9GR"
+};
+  // const app = initializeApp(firebaseConfig);
+  // const auth = getAuth(app);
+  // const db = getFirestore(app);
+
+  // Etter du har limt inn config, aktiverer vi UI og funksjoner
+</script>
+
+</body>
+</html>
