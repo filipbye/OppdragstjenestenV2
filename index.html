@@ -1,153 +1,116 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oppdragstjenesten</title>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-    <style>
-        body { font-family: Arial; background: #f0f4f8; margin: 0; padding: 0;}
-        header { background: #0077cc; color: white; padding: 20px; text-align: center; }
-        main { max-width: 800px; margin: auto; padding: 20px;}
-        input, textarea, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box;}
-        button { background: #0077cc; color: white; border: none; cursor: pointer; }
-        button:hover { background: #005fa3; }
-        .oppdrag { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; box-shadow: 0 0 5px rgba(0,0,0,0.1);}
-        footer { text-align: center; padding: 15px; background: #0077cc; color: white; margin-top: 30px; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oppdragstjenesten</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .hidden { display: none; }
+    .oppdrag { border: 1px solid #aaa; padding: 10px; margin: 10px 0; border-radius: 6px; }
+    button { margin-top: 5px; }
+  </style>
 </head>
 <body>
+  <h1>Oppdragstjenesten</h1>
 
-<header>
-    <h1>Oppdragstjenesten</h1>
-    <p>Legg ut små oppdrag og gi feedback etter fullføring</p>
-</header>
+  <div id="auth-section">
+    <h2>Logg inn / Registrer</h2>
+    <input id="email" type="email" placeholder="E-post" /><br>
+    <input id="password" type="password" placeholder="Passord" /><br>
+    <button id="login">Logg inn</button>
+    <button id="signup">Registrer</button>
+  </div>
 
-<main>
-    <div id="authDiv">
-        <h2>Login / Register</h2>
-        <input type="email" id="email" placeholder="E-post">
-        <input type="password" id="password" placeholder="Passord">
-        <button id="loginBtn">Login</button>
-        <button id="registerBtn">Register</button>
-    </div>
+  <button id="logout" class="hidden">Logg ut</button>
 
-    <div id="appDiv" style="display:none;">
-        <button id="logoutBtn">Logout</button>
+  <div id="create-task-section" class="hidden">
+    <h2>Opprett nytt oppdrag</h2>
+    <input id="title" type="text" placeholder="Tittel" /><br>
+    <textarea id="description" placeholder="Beskrivelse"></textarea><br>
+    <button id="create-task">Publiser oppdrag</button>
+  </div>
 
-        <form id="oppdragForm">
-            <h2>Legg ut nytt oppdrag</h2>
-            <input type="text" id="tittel" placeholder="Oppdrag tittel" required>
-            <textarea id="beskrivelse" rows="3" placeholder="Beskrivelse" required></textarea>
-            <button type="submit">Legg til oppdrag</button>
-        </form>
+  <div id="tasks-section" class="hidden">
+    <h2>Oppdrag</h2>
+    <div id="tasks"></div>
+  </div>
 
-        <div id="oppdragListe">
-            <h2>Tilgjengelige oppdrag</h2>
-        </div>
-    </div>
-</main>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-app.js";
+    import { 
+      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-auth.js";
+    import { 
+      getFirestore, collection, addDoc, onSnapshot, query, orderBy 
+    } from "https://www.gstatic.com/firebasejs/9.21.0/firebase-firestore.js";
 
-<footer>© 2025 Oppdragstjenesten</footer>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDetAoUeCO8DfraAHMihUJlGJupTvUwu68",
+      authDomain: "oppdragstjenesten-54329.firebaseapp.com",
+      projectId: "oppdragstjenesten-54329",
+      storageBucket: "oppdragstjenesten-54329.appspot.com",
+      messagingSenderId: "1026577707287",
+      appId: "1:1026577707287:web:d868ab7265100682840752",
+      measurementId: "G-3XNQL7S9GR"
+    };
 
-<script>
-    // ==== FIREBASE CONFIG ====
-// Sett inn din egen Firebase-konfigurasjon her
-const firebaseConfig = {
-    apiKey: "DIN_API_KEY",
-    authDomain: "DIN_AUTH_DOMAIN",
-    projectId: "DIN_PROJECT_ID",
-    storageBucket: "DIN_STORAGE_BUCKET",
-    messagingSenderId: "DIN_MESSAGING_SENDER_ID",
-    appId: "DIN_APP_ID"
-};
-firebase.initializeApp(firebaseConfig);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-const auth = firebase.auth();
-const db = firebase.firestore();
+    const email = document.getElementById("email");
+    const password = document.getElementById("password");
+    const login = document.getElementById("login");
+    const signup = document.getElementById("signup");
+    const logout = document.getElementById("logout");
+    const createTaskBtn = document.getElementById("create-task");
+    const title = document.getElementById("title");
+    const description = document.getElementById("description");
+    const tasks = document.getElementById("tasks");
+    const createTaskSection = document.getElementById("create-task-section");
+    const tasksSection = document.getElementById("tasks-section");
 
-// DOM-elementer
-const authDiv = document.getElementById('authDiv');
-const appDiv = document.getElementById('appDiv');
-const loginBtn = document.getElementById('loginBtn');
-const registerBtn = document.getElementById('registerBtn');
-const logoutBtn = document.getElementById('logoutBtn');
-const oppdragForm = document.getElementById('oppdragForm');
-const oppdragListe = document.getElementById('oppdragListe');
+    login.onclick = () => signInWithEmailAndPassword(auth, email.value, password.value).catch(alert);
+    signup.onclick = () => createUserWithEmailAndPassword(auth, email.value, password.value).catch(alert);
+    logout.onclick = () => signOut(auth);
 
-// ==== LOGIN / REGISTER ====
-registerBtn.addEventListener('click', () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    auth.createUserWithEmailAndPassword(email, password)
-        .then(user => console.log("Registrert!", user))
-        .catch(err => alert(err.message));
-});
-
-loginBtn.addEventListener('click', () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    auth.signInWithEmailAndPassword(email, password)
-        .then(user => console.log("Logget inn!", user))
-        .catch(err => alert(err.message));
-});
-
-logoutBtn.addEventListener('click', () => {
-    auth.signOut();
-});
-
-// ==== OBSERVE AUTH STATE ====
-auth.onAuthStateChanged(user => {
-    if(user){
-        authDiv.style.display = "none";
-        appDiv.style.display = "block";
-        loadOppdrag();
-    } else {
-        authDiv.style.display = "block";
-        appDiv.style.display = "none";
-    }
-});
-
-// ==== ADD OPPDRAG ====
-oppdragForm.addEventListener('submit', (e)=>{
-    e.preventDefault();
-    const tittel = document.getElementById('tittel').value;
-    const beskrivelse = document.getElementById('beskrivelse').value;
-    const brukerId = auth.currentUser.uid;
-
-    db.collection("oppdrag").add({
-        tittel,
-        beskrivelse,
-        brukerId,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    }).then(()=>{
-        oppdragForm.reset();
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        createTaskSection.classList.remove("hidden");
+        tasksSection.classList.remove("hidden");
+        logout.classList.remove("hidden");
+      } else {
+        createTaskSection.classList.add("hidden");
+        tasksSection.classList.add("hidden");
+        logout.classList.add("hidden");
+      }
     });
-});
 
-// ==== LOAD OPPDRAG ====
-function loadOppdrag(){
-    oppdragListe.innerHTML = "<h2>Tilgjengelige oppdrag</h2>";
-    db.collection("oppdrag").orderBy("timestamp","desc").onSnapshot(snapshot=>{
-        oppdragListe.innerHTML = "<h2>Tilgjengelige oppdrag</h2>";
-        snapshot.forEach(doc=>{
-            const data = doc.data();
-            const div = document.createElement('div');
-            div.classList.add('oppdrag');
-            div.innerHTML = `<h3>${data.tittel}</h3>
-                             <p>${data.beskrivelse}</p>`;
-            if(data.brukerId === auth.currentUser.uid){
-                const deleteBtn = document.createElement('button');
-                deleteBtn.textContent = "Slett oppdrag";
-                deleteBtn.onclick = () => db.collection("oppdrag").doc(doc.id).delete();
-                div.appendChild(deleteBtn);
-            }
-            oppdragListe.appendChild(div);
-        });
+    createTaskBtn.onclick = async () => {
+      await addDoc(collection(db, "oppdrag"), {
+        title: title.value,
+        description: description.value,
+        user: auth.currentUser.email,
+        timestamp: Date.now()
+      });
+      title.value = "";
+      description.value = "";
+    };
+
+    const q = query(collection(db, "oppdrag"), orderBy("timestamp", "desc"));
+    onSnapshot(q, (snapshot) => {
+      tasks.innerHTML = "";
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const div = document.createElement("div");
+        div.className = "oppdrag";
+        div.innerHTML = `<strong>${data.title}</strong><br>${data.description}<br><small>${data.user}</small>`;
+        tasks.appendChild(div);
+      });
     });
-}
-</script>
+
+  </script>
+
 </body>
 </html>
